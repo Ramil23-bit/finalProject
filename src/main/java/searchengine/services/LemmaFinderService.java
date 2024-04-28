@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 import searchengine.model.Lemma;
 import searchengine.model.Site;
@@ -19,17 +18,11 @@ import java.util.*;
 public class LemmaFinderService {
     private final LemmaRepository lemmaRepository;
 
-    /**
-     * Метод разделяет текст на слова, находит все леммы и считает их количество.
-     *
-     * @param text текст из которого будут выбираться леммы
-     * @return ключ является леммой, а значение количеством найденных лемм
-     */
-    public Map<String, Integer> collectLemmas(String text) throws IOException {
+    public List<Lemma> collectLemmas(String text) throws IOException {
         LuceneMorphology luceneMorphology = new RussianLuceneMorphology();
         String[] words = arrayContainsRussianWords(text);
         HashMap<String, Integer> lemmas = new HashMap<>();
-        Site site =new Site();
+        Site site = new Site();
 
         for (String word : words) {
                 if (word.isBlank()) {
@@ -54,23 +47,22 @@ public class LemmaFinderService {
                     lemmas.put(normalWord, 1);
                 }
         }
-        for(int j = 0; j < 10; j++){
-            List<Lemma> lemmaList = new ArrayList<>();
-            for(int i =0; i == lemmaList.size(); i++) {
-                for(Map.Entry<String, Integer> entry : lemmas.entrySet()){
-                    Lemma lemma = new Lemma();
-                    String keyLemma = entry.getKey();
-                    Integer valueLemma = entry.getValue();
-                    lemma.setLemma(keyLemma);
-                    lemma.setFrequency(valueLemma);
-                    lemma.setSiteId(site);
-                    lemmaList.add(lemma);
-                }
+        List<Lemma> lemmaList = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : lemmas.entrySet()) {
+            Lemma lemma = new Lemma();
+            String keyLemma = entry.getKey();
+            Integer valueLemma = entry.getValue();
+            lemma.setLemma(keyLemma);
+            lemma.setFrequency(valueLemma);
+            lemma.setSiteId(site);
+            lemmaList.add(lemma);
+            if (lemmas.size() == lemmaList.size()) {
+                Collections.sort(lemmaList, new ComparatorByLemmaFrequency().reversed());
                 lemmaRepository.saveAll(lemmaList);
+                break;
             }
-
         }
-        return lemmas;
+        return lemmaList;
     }
 
     private boolean anyWordBaseBelongToParticle(List<String> wordBaseForms) {
@@ -106,10 +98,4 @@ public class LemmaFinderService {
         return true;
     }
 
-//    public String clearWebSiteFromHtml(String url){
-//        Page page = new Page();
-//        String htmlCodeWebSite = page.getContent();
-//        String cleanCode = Jsoup.clean(htmlCodeWebSite, Safelist.none());
-//        return cleanCode;
-//    }
 }

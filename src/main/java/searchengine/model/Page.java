@@ -19,14 +19,14 @@ public class Page {
     @Column(name = "id")
     private Integer id;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "site_id", nullable = false, foreignKey = @ForeignKey(name = "FK_page_site"))
+    @JoinColumn(name = "site_id", foreignKey = @ForeignKey(name = "FK_page_site"))
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Site siteId;
-    @Column(name = "path",columnDefinition = "VARCHAR(512)", nullable = false)
+    @Column(name = "path",columnDefinition = "VARCHAR(512)")
     private String path;
-    @Column(name = "code", columnDefinition = "integer", nullable = false)
+    @Column(name = "code", columnDefinition = "integer")
     private Integer code;
-    @Column(name = "content", columnDefinition = "MEDIUMTEXT",nullable = false)
+    @Column(name = "content", columnDefinition = "MEDIUMTEXT")
     private String content;
     @OneToMany(mappedBy = "pageId", fetch = FetchType.LAZY)
     private List<Search> searchList = new ArrayList<>();

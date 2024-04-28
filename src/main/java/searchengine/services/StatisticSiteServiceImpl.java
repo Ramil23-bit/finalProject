@@ -5,8 +5,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Service;
-import org.springframework.test.web.servlet.MockMvc;
 import searchengine.config.SitesList;
+import searchengine.dto.statistics.SearchByRequestResponse;
 import searchengine.dto.statistics.StatisticPageResponse;
 import searchengine.dto.statistics.StatisticsSiteResponse;
 import searchengine.exception.StatisticSiteException;
@@ -37,6 +37,7 @@ public class StatisticSiteServiceImpl  {
     private final SitesList sitesList;
     private final SearchRepository searchRepository;
     private final LemmaFinderService lemmaFinderService;
+    private final LemmaRepository lemmaRepository;
     private ExecutorService executorService;
 
     public void createEntry() {
@@ -120,6 +121,25 @@ public class StatisticSiteServiceImpl  {
         search.setPercentLemma(4.02f);
         searchRepository.save(search);
         return pageResponse;
+    }
+
+    public SearchByRequestResponse searchForPagesByRequest(String query, String site) throws IOException {
+        SearchByRequestResponse requestResponse = new SearchByRequestResponse();
+        List<Lemma> searchLemma = lemmaFinderService.collectLemmas(site);
+        Lemma lemma = new Lemma();
+        int count = 0;
+        for(int i = 0; i <= searchLemma.size(); i++){
+            if(lemma.getFrequency() >= 5){
+                lemmaRepository.delete(lemma);
+            }
+            if(lemma.getLemma().contains(query)){
+                count++;
+                requestResponse.setCount(count);
+            }
+        }
+
+
+        return requestResponse;
     }
 
     public void controlSite(String url) throws IOException {

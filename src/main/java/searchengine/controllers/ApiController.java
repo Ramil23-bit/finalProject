@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import searchengine.dto.statistics.SearchByRequestResponse;
 import searchengine.dto.statistics.StatisticPageResponse;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.StatisticsSiteResponse;
@@ -12,7 +13,6 @@ import searchengine.repository.SiteRepository;
 import searchengine.services.StatisticSiteServiceImpl;
 import searchengine.services.StatisticsService;
 
-import javax.validation.Valid;
 import java.io.IOException;
 
 @RestController
@@ -43,6 +43,11 @@ public class ApiController {
     @PostMapping("/indexPage")
     public ResponseEntity<StatisticPageResponse> indexPage(String url) throws IOException {
         return ResponseEntity.ok(siteServiceImpl.addPageToIndex("https://radiomv.ru/"));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<SearchByRequestResponse> searchBySite(String query, String site) throws IOException {
+        return ResponseEntity.ok(siteServiceImpl.searchForPagesByRequest("car", "https://skillbox.ru"));
     }
 
 }

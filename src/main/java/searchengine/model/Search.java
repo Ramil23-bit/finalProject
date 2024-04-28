@@ -6,8 +6,6 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import javax.persistence.*;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "search")
@@ -18,13 +16,13 @@ public class Search {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "page_id", nullable = false, foreignKey = @ForeignKey(name = "FK_search_page"))
+    @JoinColumn(name = "page_id",  foreignKey = @ForeignKey(name = "FK_search_page"))
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Page pageId;
     @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "lemma_id", nullable = false, foreignKey = @ForeignKey(name = "FK_search_lemma"))
+    @JoinColumn(name = "lemma_id", foreignKey = @ForeignKey(name = "FK_search_lemma"))
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Lemma lemmaId;
-    @Column(name = "percent_lemma", nullable = false)
+    @Column(name = "percent_lemma")
     private float percentLemma;
 }
