@@ -5,7 +5,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Service;
-import searchengine.config.SitesList;
+import searchengine.config.Sites;
 import searchengine.dto.statistics.SearchByRequestResponse;
 import searchengine.dto.statistics.StatisticPageResponse;
 import searchengine.dto.statistics.StatisticsSiteResponse;
@@ -31,18 +31,24 @@ import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
-public class StatisticSiteServiceImpl  {
+public class StatisticSiteServiceImpl {
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
-    private final SitesList sitesList;
+    private final Sites sitesList;
     private final SearchRepository searchRepository;
     private final LemmaFinderService lemmaFinderService;
     private final LemmaRepository lemmaRepository;
     private ExecutorService executorService;
 
+    @PostConstruct
+    private void postConstruct() {
+        executorService = Executors.newCachedThreadPool();
+    }
+
+
     public void createEntry() {
         Site site = new Site();
-        site.setStatus(EnumForTable.INDEXING);
+        site.setStatus(SiteIndexStatusType.INDEXING);
         siteRepository.save(site);
     }
 
@@ -50,10 +56,8 @@ public class StatisticSiteServiceImpl  {
 
         try {
             controlSite(url);
-        }catch (IllegalArgumentException e){
+        } catch (IllegalArgumentException | IOException e) {
             throw new IllegalArgumentException("Data entered incorrectly");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -61,7 +65,7 @@ public class StatisticSiteServiceImpl  {
     public void deleteSite(String url) {
 
         if (!url.isEmpty()) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("Can't delete file");
         }
         Long deleteDataSite = siteRepository.deleteByUrl(url);
         Long deleteDataPage = pageRepository.deleteByPath(url);
@@ -74,7 +78,7 @@ public class StatisticSiteServiceImpl  {
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             sitesList.getSites().forEach(site -> {
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> roundSite(site.getUrl())
-                        ,executorService);
+                        , executorService);
                 futures.add(future);
             });
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
@@ -86,23 +90,18 @@ public class StatisticSiteServiceImpl  {
         return siteResponse;
     }
 
-    @PostConstruct
-    private void postConstruct(){
-        executorService = Executors.newCachedThreadPool();
-    }
-
     private boolean roundSite(String url) {
         Site site = new Site();
         try {
             controlSite(url);
             throw new StatisticSiteException("HTML code not found");
         } catch (Exception e) {
-            site.setStatus(EnumForTable.INDEXING);
+            site.setStatus(SiteIndexStatusType.INDEXING);
         }
         return true;
     }
 
-    public StatisticPageResponse addPageToIndex(String url) throws IOException {
+    public StatisticPageResponse urlRegex(String url) throws IOException {
         Search search = new Search();
         Page page = new Page();
         Lemma lemma = new Lemma();
@@ -111,7 +110,7 @@ public class StatisticSiteServiceImpl  {
 
         String regex = "\\b(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
 
-        if(!siteCheck(url, regex)){
+        if (!siteCheck(url, regex)) {
             pageResponse.setResult(false);
             pageResponse.setUrl("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
         }
@@ -128,24 +127,22 @@ public class StatisticSiteServiceImpl  {
         List<Lemma> searchLemma = lemmaFinderService.collectLemmas(site);
         Lemma lemma = new Lemma();
         int count = 0;
-        for(int i = 0; i <= searchLemma.size(); i++){
-            if(lemma.getFrequency() >= 5){
+        for (int i = 0; i <= searchLemma.size(); i++) {
+            if (lemma.getFrequency() >= 5) {
                 lemmaRepository.delete(lemma);
             }
-            if(lemma.getLemma().contains(query)){
+            if (lemma.getLemma().contains(query)) {
                 count++;
                 requestResponse.setCount(count);
             }
         }
-
-
         return requestResponse;
     }
 
+    @Transactional
     public void controlSite(String url) throws IOException {
         Site site = new Site();
         Page page = new Page();
-        Lemma lemma = new Lemma();
 
         Document document = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (Windows; Windows NT 6.3; x64) AppleWebKit/537.1 (KHTML, like Gecko)" +
@@ -162,8 +159,6 @@ public class StatisticSiteServiceImpl  {
 
         String html = document.html();
 
-        System.out.printf("Execute task on thread %s%n", Thread.currentThread());
-
         if (!attribute.startsWith(url)) {
             throw new StatisticSiteException("Incorrect data entered");
         }
@@ -172,7 +167,7 @@ public class StatisticSiteServiceImpl  {
         site.setStatus_time(Instant.now());
         site.setUrl(attribute);
         site.setNameSite(title);
-        site.setStatus(EnumForTable.INDEXED);
+        site.setStatus(SiteIndexStatusType.INDEXED);
         siteRepository.save(site);
 
         page.setPath(attribute);
@@ -183,22 +178,23 @@ public class StatisticSiteServiceImpl  {
 
         lemmaFinderService.collectLemmas(html);
     }
-    public StatisticsSiteResponse stopIndexing(){
+
+    public StatisticsSiteResponse stopIndexing() {
         StatisticsSiteResponse siteResponse = new StatisticsSiteResponse();
-        if(!roundSites().isResult()){
+        if (!roundSites().isResult()) {
             siteResponse.setResult(true);
         }
         siteResponse.setError("Индксация уже запущена");
         return siteResponse;
     }
 
-    public static boolean siteCheck(String url, String pattern1){
+    public static boolean siteCheck(String url, String pattern1) {
         try {
             Pattern patt = Pattern.compile(pattern1);
             Matcher matcher = patt.matcher(url);
             return matcher.matches();
         } catch (RuntimeException e) {
             return false;
-    }
+        }
     }
 }

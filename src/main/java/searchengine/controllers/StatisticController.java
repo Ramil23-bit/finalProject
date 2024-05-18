@@ -19,12 +19,11 @@ import java.io.IOException;
 @Configuration
 @RequestMapping("/api")
 @RequiredArgsConstructor
-public class ApiController {
+public class StatisticController {
 
     private final StatisticsService statisticsService;
-    private final SiteRepository siteRepository;
-    private final PageRepository pageRepository;
     private final StatisticSiteServiceImpl siteServiceImpl;
+
     @GetMapping("/statistics")
     public ResponseEntity<StatisticsResponse> statistics() {
         return ResponseEntity.ok(statisticsService.getStatistics());
@@ -36,13 +35,13 @@ public class ApiController {
     }
 
     @GetMapping("/stopIndexing")
-    public ResponseEntity<StatisticsSiteResponse> stopIndexing(){
+    public ResponseEntity<StatisticsSiteResponse> stopIndexing() {
         return ResponseEntity.ok(siteServiceImpl.stopIndexing());
     }
 
     @PostMapping("/indexPage")
     public ResponseEntity<StatisticPageResponse> indexPage(String url) throws IOException {
-        return ResponseEntity.ok(siteServiceImpl.addPageToIndex("https://radiomv.ru/"));
+        return ResponseEntity.ok(siteServiceImpl.urlRegex("https://radiomv.ru/"));
     }
 
     @GetMapping("/search")

@@ -20,9 +20,8 @@ public class Site {
     private Integer id;
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private EnumForTable status;
+    private SiteIndexStatusType status;
     @Column(name = "status_time")
-    //@CreationTimestamp
     @UpdateTimestamp
     private Instant status_time;
     @Column(name = "last_error", columnDefinition = "TEXT")

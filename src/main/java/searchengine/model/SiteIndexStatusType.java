@@ -1,8 +1,7 @@
 package searchengine.model;
 
-import javax.persistence.Column;
 
-public enum EnumForTable {
+public enum SiteIndexStatusType {
     INDEXING,
     INDEXED,
     FAILED;

@@ -19,36 +19,11 @@ public class LemmaFinderService {
     private final LemmaRepository lemmaRepository;
 
     public List<Lemma> collectLemmas(String text) throws IOException {
-        LuceneMorphology luceneMorphology = new RussianLuceneMorphology();
-        String[] words = arrayContainsRussianWords(text);
-        HashMap<String, Integer> lemmas = new HashMap<>();
         Site site = new Site();
+        enteredData(text);
 
-        for (String word : words) {
-                if (word.isBlank()) {
-                    continue;
-                }
-
-                List<String> wordBaseForms = luceneMorphology.getMorphInfo(word);
-                if (anyWordBaseBelongToParticle(wordBaseForms)) {
-                    continue;
-                }
-
-                List<String> normalForms = luceneMorphology.getNormalForms(word);
-                if (normalForms.isEmpty()) {
-                    continue;
-                }
-
-                String normalWord = normalForms.get(0);
-
-                if (lemmas.containsKey(normalWord)) {
-                    lemmas.put(normalWord, lemmas.get(normalWord) + 1);
-                } else {
-                    lemmas.put(normalWord, 1);
-                }
-        }
         List<Lemma> lemmaList = new ArrayList<>();
-        for (Map.Entry<String, Integer> entry : lemmas.entrySet()) {
+        for (Map.Entry<String, Integer> entry : enteredData(text).entrySet()) {
             Lemma lemma = new Lemma();
             String keyLemma = entry.getKey();
             Integer valueLemma = entry.getValue();
@@ -56,7 +31,7 @@ public class LemmaFinderService {
             lemma.setFrequency(valueLemma);
             lemma.setSiteId(site);
             lemmaList.add(lemma);
-            if (lemmas.size() == lemmaList.size()) {
+            if (enteredData(text).size() == lemmaList.size()) {
                 Collections.sort(lemmaList, new ComparatorByLemmaFrequency().reversed());
                 lemmaRepository.saveAll(lemmaList);
                 break;
@@ -65,7 +40,7 @@ public class LemmaFinderService {
         return lemmaList;
     }
 
-    private boolean anyWordBaseBelongToParticle(List<String> wordBaseForms) {
+    private boolean hasParticleProperty(List<String> wordBaseForms) {
         return wordBaseForms.stream().anyMatch(this::hasParticleProperty);
     }
 
@@ -79,11 +54,8 @@ public class LemmaFinderService {
         return false;
     }
 
-    private String[] arrayContainsRussianWords(String text) {
-        return text.toLowerCase(Locale.ROOT)
-                .replaceAll("([^а-я\\s])", " ")
-                .trim()
-                .split("\\s+");
+    private String[] containsRussian(String text) {
+        return text.toLowerCase(Locale.ROOT).replaceAll("([^а-я\\s])", " ").trim().split("\\s+");
     }
 
     private boolean isCorrectWordForm(String word) throws IOException {
@@ -98,4 +70,33 @@ public class LemmaFinderService {
         return true;
     }
 
+    private HashMap<String, Integer> enteredData(String text) throws IOException {
+        LuceneMorphology luceneMorphology = new RussianLuceneMorphology();
+        HashMap<String, Integer> lemmas = new HashMap<>();
+        String[] words = containsRussian(text);
+        for (String word : words) {
+            if (word.isBlank()) {
+                continue;
+            }
+
+            List<String> wordBaseForms = luceneMorphology.getMorphInfo(word);
+            if (hasParticleProperty(wordBaseForms)) {
+                continue;
+            }
+
+            List<String> normalForms = luceneMorphology.getNormalForms(word);
+            if (normalForms.isEmpty()) {
+                continue;
+            }
+
+            String normalWord = normalForms.get(0);
+
+            if (lemmas.containsKey(normalWord)) {
+                lemmas.put(normalWord, lemmas.get(normalWord) + 1);
+            } else {
+                lemmas.put(normalWord, 1);
+            }
+        }
+        return lemmas;
+    }
 }
